@@ -133,20 +133,29 @@ if exist ".deps_ok" (
 )
 
 REM ------------------------------------------------------------
-REM  5. Ejecutar la aplicacion
+REM  5. Crear acceso directo en el escritorio
 REM ------------------------------------------------------------
-echo [5/5] Iniciando la aplicacion...
-echo(
-"venv\Scripts\python.exe" main.py
-set "APP_EXIT=%errorlevel%"
-if not "%APP_EXIT%"=="0" (
-    echo(
-    echo ============================================
-    echo    La aplicacion se cerro con un error.
-    echo    Revisa el mensaje de arriba y toma una captura.
-    echo ============================================
-    echo(
-    pause
+echo [5/5] Creando acceso directo en el escritorio...
+set "LAUNCHER=%APP_DIR%\Ejecutar_Reporte_Ventas.bat"
+set "ICONO=%APP_DIR%\dcic.ico"
+if exist "%ICONO%" (
+    set "ICON_LINE=$s.IconLocation='%ICONO%';"
+) else (
+    set "ICON_LINE="
 )
+powershell -NoProfile -Command "$s=(New-Object -ComObject WScript.Shell).CreateShortcut([Environment]::GetFolderPath('Desktop')+'\Reporte de Ventas.lnk'); $s.TargetPath='%LAUNCHER%'; $s.WorkingDirectory='%APP_DIR%'; !ICON_LINE! $s.Save()"
+
+echo(
+echo ============================================
+echo    Instalacion completa.
+echo(
+echo    Abre la aplicacion con el icono del escritorio:
+echo       "Reporte de Ventas"
+echo(
+echo    (La primera vez te pedira el archivo de
+echo     credenciales; solo esa vez.)
+echo ============================================
+echo(
+pause
 
 endlocal

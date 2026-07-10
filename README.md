@@ -10,27 +10,33 @@ por lo que el resultado es idéntico al del sistema principal.
 
 ---
 
-## Para el usuario final (instalación en 2 pasos)
+## Para el usuario final
 
 El responsable te enviará **2 archivos**:
 
-1. `INSTALAR_Reporte_Ventas.bat` — el instalador.
+1. `INSTALAR_Reporte_Ventas.bat` — el instalador (se usa una sola vez).
 2. `credenciales_dcic.env` — las credenciales (guárdalo, lo necesitas 1 vez).
 
-Pasos:
+### Instalar (una sola vez)
 
 1. **Doble clic** en `INSTALAR_Reporte_Ventas.bat`.
 2. Elige la carpeta donde quieres instalar la aplicación.
-3. El instalador descarga todo, instala lo necesario y abre la app.
-4. La **primera vez**, la app te pedirá el archivo de credenciales:
-   selecciona `credenciales_dcic.env`. No se te volverá a pedir.
+3. El instalador descarga todo, instala lo necesario y crea un acceso directo
+   **"Reporte de Ventas"** en el escritorio.
 
-A partir de ahí, cada vez que quieras generar un reporte solo vuelve a
-ejecutar `INSTALAR_Reporte_Ventas.bat`: detecta que ya está todo instalado,
-no vuelve a preguntar nada y abre la app directamente.
+### Usar (cada vez que quieras un reporte)
+
+1. **Doble clic** en el icono **"Reporte de Ventas"** del escritorio.
+2. La **primera vez** te pedirá el archivo de credenciales: selecciona
+   `credenciales_dcic.env`. No se te volverá a pedir.
+3. Elige el rango de fechas y la carpeta de salida, y pulsa **Generar Excel**.
 
 > **Requisito:** tener **Python** instalado (el instalador te avisa y abre la
 > página de descarga si falta) y **acceso de red a la base de datos**.
+
+> **Separación de responsabilidades:** `INSTALAR_Reporte_Ventas.bat` solo
+> instala; `Ejecutar_Reporte_Ventas.bat` (dentro de la carpeta instalada, y al
+> que apunta el acceso directo) es el que abre la app.
 
 ---
 
@@ -78,7 +84,9 @@ El archivo se guarda como `Ventas-DD-MM-YYYY_al_DD-MM-YYYY.xlsx`.
 
 ```
 .
-├── INSTALAR_Reporte_Ventas.bat   # Instalador todo-en-uno (para usuarios)
+├── INSTALAR_Reporte_Ventas.bat   # Instalador (descarga + venv + deps + acceso directo)
+├── Ejecutar_Reporte_Ventas.bat   # Lanzador de la app (al que apunta el acceso directo)
+├── dcic.ico                      # Icono del acceso directo
 ├── credenciales_dcic.env         # Credenciales (NO se sube; se envía aparte)
 ├── main.py                       # App de escritorio (GUI) + first-run + Django
 ├── reporte.py                    # Queries y generación del Excel
