@@ -9,7 +9,8 @@ REM ============================================================
 set "REPO_URL=https://github.com/TomasAndresPH/dcic-reporte-ventas.git"
 set "BRANCH=main"
 set "APP_DIR_NAME=dcic-reporte-ventas"
-set "CFG_FILE=%~dp0.dcic_ruta_instalacion.txt"
+set "CFG_DIR=%LOCALAPPDATA%\DcicReporteVentas"
+set "CFG_FILE=%CFG_DIR%\ruta_instalacion.txt"
 REM ============================================================
 
 echo(
@@ -92,12 +93,19 @@ if exist "%APP_DIR%\main.py" (
 )
 
 if not exist "%APP_DIR%\main.py" (
-    echo    ERROR: no se pudo obtener la aplicacion.
+    echo(
+    echo    ERROR: no se pudo descargar la aplicacion.
+    echo    Posibles causas:
+    echo      - Sin conexion a internet.
+    echo      - El repositorio no es accesible (debe ser publico).
+    echo    Avisa al responsable si el problema persiste.
+    echo(
     pause
     exit /b 1
 )
 
 REM Guardar la ruta para no volver a preguntar la proxima vez
+if not exist "%CFG_DIR%" mkdir "%CFG_DIR%"
 > "%CFG_FILE%" echo %APP_DIR%
 
 REM ------------------------------------------------------------
@@ -130,5 +138,15 @@ REM ------------------------------------------------------------
 echo [5/5] Iniciando la aplicacion...
 echo(
 "venv\Scripts\python.exe" main.py
+set "APP_EXIT=%errorlevel%"
+if not "%APP_EXIT%"=="0" (
+    echo(
+    echo ============================================
+    echo    La aplicacion se cerro con un error.
+    echo    Revisa el mensaje de arriba y toma una captura.
+    echo ============================================
+    echo(
+    pause
+)
 
 endlocal
