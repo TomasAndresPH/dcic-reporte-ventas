@@ -1,0 +1,26 @@
+# Entorno virtual
+venv/
+env/
+.venv/
+
+# Credenciales (NUNCA subir al repo)
+.env
+credenciales_dcic.env
+
+# Marcadores del instalador
+.deps_ok
+.dcic_ruta_instalacion.txt
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Salidas
+*.xlsx
+
+# IDE / SO
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

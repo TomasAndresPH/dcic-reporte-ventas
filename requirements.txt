@@ -1,0 +1,7 @@
+Django==5.2.1
+psycopg2-binary==2.9.11
+pandas==2.2.3
+XlsxWriter==3.2.5
+tkcalendar==1.6.1
+python-dotenv==1.1.0
+Babel==2.17.0
