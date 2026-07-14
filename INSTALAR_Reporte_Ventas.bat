@@ -56,7 +56,7 @@ REM ------------------------------------------------------------
 REM  3. Descargar el repositorio
 REM ------------------------------------------------------------
 echo [3/5] Obteniendo la aplicacion...
-if exist "%APP_DIR%\main.py" goto ya_descargado
+if exist "%APP_DIR%\main.py" goto actualizar
 
 where git >nul 2>&1
 if errorlevel 1 goto usar_zip
@@ -78,6 +78,29 @@ del "%ZIP_TMP%" >nul 2>&1
 
 :verificar_descarga
 if not exist "%APP_DIR%\main.py" goto descarga_fallida
+goto ya_descargado
+
+REM ------------------------------------------------------------
+REM  La app ya existe: traer la ultima version con git pull.
+REM  Si el pull cambia algo, se borra .deps_ok para reinstalar
+REM  dependencias (por si cambio requirements.txt).
+REM ------------------------------------------------------------
+:actualizar
+if not exist "%APP_DIR%\.git" goto ya_descargado
+where git >nul 2>&1
+if errorlevel 1 goto ya_descargado
+echo    Actualizando a la ultima version...
+pushd "%APP_DIR%"
+set "OLD_HEAD="
+for /f "delims=" %%h in ('git rev-parse HEAD 2^>nul') do set "OLD_HEAD=%%h"
+git pull --ff-only origin %BRANCH%
+set "NEW_HEAD="
+for /f "delims=" %%h in ('git rev-parse HEAD 2^>nul') do set "NEW_HEAD=%%h"
+popd
+if not "%OLD_HEAD%"=="%NEW_HEAD%" (
+    echo    Se descargaron cambios; se actualizaran las dependencias.
+    del "%APP_DIR%\.deps_ok" >nul 2>&1
+)
 
 :ya_descargado
 REM Guardar la ruta para no volver a preguntar la proxima vez
