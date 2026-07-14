@@ -97,7 +97,10 @@ if not exist "venv\Scripts\python.exe" (
 if exist ".deps_ok" goto deps_listas
 echo    Instalando dependencias (solo la primera vez, puede tardar)...
 "venv\Scripts\python.exe" -m pip install --upgrade pip >nul
-"venv\Scripts\python.exe" -m pip install -r requirements.txt
+REM  --only-binary=:all: obliga a usar paquetes precompilados (wheels).
+REM  Asi nunca intenta compilar (que requiere Visual Studio) y da un
+REM  error claro si el Python instalado es demasiado nuevo.
+"venv\Scripts\python.exe" -m pip install --only-binary=:all: --prefer-binary -r requirements.txt
 if errorlevel 1 goto deps_fallidas
 > ".deps_ok" echo ok
 goto deps_ok_fin
@@ -163,7 +166,15 @@ goto fin
 :deps_fallidas
 echo(
 echo    ERROR instalando dependencias.
-echo    Revisa el mensaje de arriba y toma una captura.
+echo(
+echo    Causa mas probable: la version de Python instalada es
+echo    demasiado nueva y aun no tiene paquetes compatibles.
+echo    Solucion: instala Python 3.13 (o 3.12) desde:
+echo       https://www.python.org/downloads/release/python-3130/
+echo    Marca "Add Python to PATH", desinstala el Python actual si
+echo    hace falta, borra la carpeta "venv" y vuelve a ejecutar.
+echo(
+echo    Si el problema persiste, toma una captura del mensaje de arriba.
 echo(
 pause
 goto fin
