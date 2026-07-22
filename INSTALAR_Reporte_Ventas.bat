@@ -53,7 +53,7 @@ echo    Carpeta: %APP_DIR%
 :tener_carpeta
 
 REM ------------------------------------------------------------
-REM  3. Descargar el repositorio
+REM  3. Descargar el repositorio (o actualizarlo si ya existe)
 REM ------------------------------------------------------------
 echo [3/5] Obteniendo la aplicacion...
 if exist "%APP_DIR%\main.py" goto actualizar
@@ -67,40 +67,65 @@ goto verificar_descarga
 
 :usar_zip
 echo    git no encontrado. Descargando ZIP...
-set "ZIP_URL=%REPO_URL:.git=%/archive/refs/heads/%BRANCH%.zip"
-set "ZIP_TMP=%TEMP%\dcic_app.zip"
-set "EXT_TMP=%TEMP%\dcic_app_extract"
-if exist "%EXT_TMP%" rmdir /s /q "%EXT_TMP%"
-powershell -NoProfile -Command "try { Invoke-WebRequest -Uri '%ZIP_URL%' -OutFile '%ZIP_TMP%'; Expand-Archive -Path '%ZIP_TMP%' -DestinationPath '%EXT_TMP%' -Force } catch { exit 1 }"
+call :bajar_zip
 if errorlevel 1 goto descarga_fallida
 powershell -NoProfile -Command "$s=Get-ChildItem -Directory '%EXT_TMP%' | Select-Object -First 1; New-Item -ItemType Directory -Force -Path (Split-Path '%APP_DIR%') | Out-Null; Move-Item -Force $s.FullName '%APP_DIR%'"
 del "%ZIP_TMP%" >nul 2>&1
-
-:verificar_descarga
-if not exist "%APP_DIR%\main.py" goto descarga_fallida
-goto ya_descargado
+goto verificar_descarga
 
 REM ------------------------------------------------------------
 REM  La app ya existe: traer la ultima version con git pull.
-REM  Si el pull cambia algo, se borra .deps_ok para reinstalar
-REM  dependencias (por si cambio requirements.txt).
+REM  Si git no esta disponible o el pull falla, se actualiza desde el ZIP.
+REM  Nunca se tocan .env (credenciales), venv ni los archivos del usuario.
 REM ------------------------------------------------------------
 :actualizar
-if not exist "%APP_DIR%\.git" goto ya_descargado
+echo    Instalacion existente. Buscando actualizaciones...
 where git >nul 2>&1
-if errorlevel 1 goto ya_descargado
-echo    Actualizando a la ultima version...
+if errorlevel 1 goto actualizar_zip
+if not exist "%APP_DIR%\.git" goto actualizar_zip
+
 pushd "%APP_DIR%"
 set "OLD_HEAD="
 for /f "delims=" %%h in ('git rev-parse HEAD 2^>nul') do set "OLD_HEAD=%%h"
 git pull --ff-only origin %BRANCH%
+set "PULL_ERR=%errorlevel%"
 set "NEW_HEAD="
 for /f "delims=" %%h in ('git rev-parse HEAD 2^>nul') do set "NEW_HEAD=%%h"
 popd
-if not "%OLD_HEAD%"=="%NEW_HEAD%" (
-    echo    Se descargaron cambios; se actualizaran las dependencias.
-    del "%APP_DIR%\.deps_ok" >nul 2>&1
-)
+if not "%PULL_ERR%"=="0" goto actualizar_zip
+if "%OLD_HEAD%"=="%NEW_HEAD%" goto sin_cambios
+echo    Aplicacion actualizada.
+goto actualizada
+
+:sin_cambios
+echo    Ya tienes la ultima version.
+goto ya_descargado
+
+:actualizar_zip
+echo    Actualizando archivos...
+call :bajar_zip
+if errorlevel 1 goto sin_actualizacion
+set "SRC_DIR="
+for /f "usebackq delims=" %%s in (`powershell -NoProfile -Command "(Get-ChildItem -Directory '%EXT_TMP%')[0].FullName"`) do set "SRC_DIR=%%s"
+if not defined SRC_DIR goto sin_actualizacion
+REM /IS fuerza la copia aunque el tamano y la fecha coincidan
+robocopy "%SRC_DIR%" "%APP_DIR%" /E /IS /XD venv .git __pycache__ /XF .env .deps_ok >nul
+if errorlevel 8 goto sin_actualizacion
+del "%ZIP_TMP%" >nul 2>&1
+echo    Aplicacion actualizada.
+goto actualizada
+
+:sin_actualizacion
+echo    AVISO: no se pudo actualizar; se usara la version ya instalada.
+goto ya_descargado
+
+:actualizada
+REM Tras actualizar, revisar dependencias por si cambiaron
+if exist "%APP_DIR%\.deps_ok" del "%APP_DIR%\.deps_ok" >nul 2>&1
+goto ya_descargado
+
+:verificar_descarga
+if not exist "%APP_DIR%\main.py" goto descarga_fallida
 
 :ya_descargado
 REM Guardar la ruta para no volver a preguntar la proxima vez
@@ -204,3 +229,17 @@ goto fin
 
 :fin
 endlocal
+exit /b 0
+
+REM ============================================================
+REM   SUBRUTINAS
+REM ============================================================
+:bajar_zip
+REM Descarga y descomprime el repo en %EXT_TMP%. Devuelve 1 si falla.
+set "ZIP_URL=%REPO_URL:.git=%/archive/refs/heads/%BRANCH%.zip"
+set "ZIP_TMP=%TEMP%\dcic_app.zip"
+set "EXT_TMP=%TEMP%\dcic_app_extract"
+if exist "%EXT_TMP%" rmdir /s /q "%EXT_TMP%"
+powershell -NoProfile -Command "try { Invoke-WebRequest -Uri '%ZIP_URL%' -OutFile '%ZIP_TMP%'; Expand-Archive -Path '%ZIP_TMP%' -DestinationPath '%EXT_TMP%' -Force } catch { exit 1 }"
+if errorlevel 1 exit /b 1
+exit /b 0

@@ -33,6 +33,58 @@ def _env_tiene_db(path):
     return 'DB_HOST' in contenido and 'DB_NAME' in contenido
 
 
+def pedir_credenciales(parent=None, obligatorio=True):
+    """Pide el archivo de credenciales y lo guarda como .env.
+
+    Devuelve True si se guardaron. Si `obligatorio` es True (arranque inicial),
+    cancelar cierra la aplicación; si es False (cambio manual desde la app),
+    cancelar simplemente devuelve False.
+    """
+    while True:
+        path = filedialog.askopenfilename(
+            parent=parent,
+            title="Selecciona el archivo de credenciales",
+            filetypes=[("Archivos de credenciales", "*.env *.txt"), ("Todos los archivos", "*.*")])
+
+        if not path:
+            if messagebox.askretrycancel(
+                    "Sin archivo",
+                    "No seleccionaste ningún archivo.\n¿Quieres reintentar?",
+                    parent=parent):
+                continue
+            if not obligatorio:
+                return False
+            messagebox.showerror(
+                "Configuración cancelada",
+                "No se puede continuar sin el archivo de credenciales.",
+                parent=parent)
+            sys.exit(1)
+
+        try:
+            with open(path, 'r', encoding='utf-8') as f:
+                contenido = f.read()
+        except OSError as e:
+            messagebox.showerror("Error", f"No se pudo leer el archivo:\n{e}", parent=parent)
+            continue
+
+        if 'DB_HOST' not in contenido or 'DB_NAME' not in contenido:
+            messagebox.showerror(
+                "Archivo inválido",
+                "El archivo seleccionado no parece contener las credenciales "
+                "correctas (faltan DB_HOST / DB_NAME).\n\n"
+                "Revisa que sea el archivo que te enviaron.",
+                parent=parent)
+            continue
+
+        try:
+            shutil.copyfile(path, ENV_PATH)
+        except OSError as e:
+            messagebox.showerror("Error", f"No se pudo guardar la configuración:\n{e}", parent=parent)
+            continue
+
+        return True
+
+
 def asegurar_credenciales():
     """Si no hay .env válido, pide el archivo de credenciales una sola vez."""
     if _env_tiene_db(ENV_PATH):
@@ -47,49 +99,12 @@ def asegurar_credenciales():
         "(por ejemplo 'credenciales_dcic.env').\n\n"
         "Solo tendrás que hacerlo esta vez.")
 
-    while True:
-        path = filedialog.askopenfilename(
-            title="Selecciona el archivo de credenciales",
-            filetypes=[("Archivos de credenciales", "*.env *.txt"), ("Todos los archivos", "*.*")])
+    pedir_credenciales(obligatorio=True)
 
-        if not path:
-            if messagebox.askretrycancel(
-                    "Sin archivo",
-                    "No seleccionaste ningún archivo.\n¿Quieres reintentar?"):
-                continue
-            messagebox.showerror(
-                "Configuración cancelada",
-                "No se puede continuar sin el archivo de credenciales.")
-            root.destroy()
-            sys.exit(1)
-
-        try:
-            with open(path, 'r', encoding='utf-8') as f:
-                contenido = f.read()
-        except OSError as e:
-            messagebox.showerror("Error", f"No se pudo leer el archivo:\n{e}")
-            continue
-
-        if 'DB_HOST' not in contenido or 'DB_NAME' not in contenido:
-            messagebox.showerror(
-                "Archivo inválido",
-                "El archivo seleccionado no parece contener las credenciales "
-                "correctas (faltan DB_HOST / DB_NAME).\n\n"
-                "Revisa que sea el archivo que te enviaron.")
-            continue
-
-        try:
-            shutil.copyfile(path, ENV_PATH)
-        except OSError as e:
-            messagebox.showerror("Error", f"No se pudo guardar la configuración:\n{e}")
-            continue
-
-        messagebox.showinfo(
-            "Listo",
-            "Credenciales guardadas correctamente.\n"
-            "No se volverán a pedir en este equipo.")
-        break
-
+    messagebox.showinfo(
+        "Listo",
+        "Credenciales guardadas correctamente.\n"
+        "No se volverán a pedir en este equipo.")
     root.destroy()
 
 
@@ -151,10 +166,12 @@ class App(tk.Tk):
             row=6, column=0, columnspan=2, pady=(10, 0), sticky=tk.W)
 
         button_frame = ttk.Frame(main_frame)
-        button_frame.grid(row=7, column=0, columnspan=2, pady=(20, 0), sticky=tk.E)
+        button_frame.grid(row=7, column=0, columnspan=2, pady=(20, 0), sticky='ew')
         self.generate_btn = ttk.Button(button_frame, text="Generar Excel", command=self.on_generate)
         self.generate_btn.pack(side=tk.RIGHT, padx=(5, 0))
         ttk.Button(button_frame, text="Salir", command=self.destroy).pack(side=tk.RIGHT)
+        ttk.Button(button_frame, text="Actualizar credenciales",
+                   command=self.cambiar_credenciales).pack(side=tk.LEFT)
 
         main_frame.columnconfigure(1, weight=1)
         self.update_dir_display()
@@ -186,6 +203,27 @@ class App(tk.Tk):
 
     def _set_status(self, msg):
         self.status_var.set(msg)
+
+    def cambiar_credenciales(self):
+        """Permite reemplazar el archivo de credenciales (por ejemplo si cambió el servidor)."""
+        if not messagebox.askokcancel(
+                "Actualizar credenciales",
+                "Vas a reemplazar el archivo de credenciales actual por uno nuevo.\n\n"
+                "Úsalo solo si te enviaron credenciales actualizadas.\n"
+                "La aplicación se cerrará al terminar y tendrás que volver a abrirla.",
+                parent=self):
+            return
+
+        if not pedir_credenciales(parent=self, obligatorio=False):
+            return
+
+        messagebox.showinfo(
+            "Credenciales actualizadas",
+            "Se guardaron las nuevas credenciales.\n\n"
+            "La aplicación se cerrará ahora: vuelve a abrirla con el icono del "
+            "escritorio para que tomen efecto.",
+            parent=self)
+        self.destroy()
 
     def on_generate(self):
         start_date = self.start_date_entry.get_date()
@@ -229,9 +267,19 @@ class App(tk.Tk):
     def _on_error(self, msg):
         self.generate_btn.config(state=tk.NORMAL)
         self._set_status("Ocurrió un error.")
+
+        es_conexion = any(p in msg.lower() for p in
+                          ('could not connect', 'connection refused', 'timeout',
+                           'could not translate host', 'no such host', 'operationalerror'))
+        ayuda = ""
+        if es_conexion:
+            ayuda = ("\n\nParece un problema de conexión con la base de datos. "
+                     "Si te enviaron credenciales nuevas, usa el botón "
+                     "'Actualizar credenciales'.")
+
         messagebox.showerror(
             "Error de Exportación",
-            f"Ocurrió un error inesperado:\n{msg}",
+            f"Ocurrió un error inesperado:\n{msg}{ayuda}",
             parent=self)
 
 

@@ -31,6 +31,18 @@ El responsable te enviará **2 archivos**:
    `credenciales_dcic.env`. No se te volverá a pedir.
 3. Elige el rango de fechas y la carpeta de salida, y pulsa **Generar Excel**.
 
+### Si te envían credenciales nuevas
+
+Si cambia el servidor de la base de datos (o cualquier dato de conexión), pulsa
+**"Actualizar credenciales"** en la ventana de la app y selecciona el archivo
+nuevo. La app se cerrará; vuelve a abrirla y listo. No hay que reinstalar.
+
+### Si te avisan que hay una versión nueva de la app
+
+Vuelve a ejecutar `INSTALAR_Reporte_Ventas.bat`: detecta la instalación
+existente y la actualiza en el mismo lugar. **No** borra tus credenciales ni te
+vuelve a pedir la carpeta.
+
 > **Requisito:** tener **Python** instalado (el instalador te avisa y abre la
 > página de descarga si falta) y **acceso de red a la base de datos**.
 
@@ -84,7 +96,7 @@ El archivo se guarda como `Ventas-DD-MM-YYYY_al_DD-MM-YYYY.xlsx`.
 
 ```
 .
-├── INSTALAR_Reporte_Ventas.bat   # Instalador (descarga + venv + deps + acceso directo)
+├── INSTALAR_Reporte_Ventas.bat   # Instalador / actualizador (descarga + venv + deps + acceso directo)
 ├── Ejecutar_Reporte_Ventas.bat   # Lanzador de la app (al que apunta el acceso directo)
 ├── dcic.ico                      # Icono del acceso directo
 ├── credenciales_dcic.env         # Credenciales (NO se sube; se envía aparte)
